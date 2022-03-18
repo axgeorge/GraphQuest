@@ -149,6 +149,77 @@ def get_clicked_pose(pos, rows, width):
 
     return row, col
 
+# function that converts vertex object to vertex index. Very helpful for analyzing stuff
+
+def obj_to_index(G):
+    V = []
+    G_in = []
+    for entry in G:
+        g_1 = entry[0]
+        g_2 = entry[1]
+        V.append(g_1)
+        V.append(g_2)
+    V = list(set(V))
+    for i in range(len(G)):
+        G_in.append([V.index(G[i][0]), V.index(G[i][1]), G[i][2]]) 
+    return [V, G_in]
+
+# A function that creates an adj matrix
+
+def create_adj_matrix(A, G_in):
+    for entry in G_in:
+        g_1 = entry[0]
+        g_2 = entry[1]
+        A[g_1][g_2] = 1
+        A[g_2][g_1] = 1
+    return A
+
+# Recursion part of a depth search function
+
+def depth_first_search(A, k, visited):
+    stack = []
+    stack.append(k)
+    while len(stack) != 0:
+        s = stack.pop()
+        if visited[s] == 0:
+            visited[s] = 1
+        for neighbor in range(len(A)):
+            if A[s][neighbor] == 1:
+                if visited[neighbor] == 0:
+                    stack.append(neighbor)
+    print(visited)
+    return visited
+
+# A depth search function to identify different disconnected nodes of graphs
+
+def DFS(A, visited, track):
+    P = []
+    for i in range(len(A)):
+        visited.append(0)
+    for i in range(len(visited)):
+        track.append([])
+        if visited[i] == 0:
+            visited = depth_first_search(A, i, visited)
+        for j in range(len(visited)):
+            if visited[j] != 0 and j not in P:
+                P.append(j)
+                track[i].append(j)
+    print(track)
+    return track
+
+# A function that identifies, and categorizes disconnected graphs
+
+def disjoint_graphs_finder(G, track):
+    D = []
+    for i in range(len(track)):
+        D.append([])
+    for i in range(len(G)):
+        for j in range(len(track)):
+            if G[i][0] in track[j]:
+                D[j].append(G[i])
+    print(D)
+    return(D)
+
 # find the absolute root/parent of a node
 
 def find(parent, node, V): 
@@ -207,12 +278,28 @@ def algorithm(graph, V):
             del result[f]
         else:
             f += 1
+
+    [N, G_in] = obj_to_index(result)
+    print(G_in)
+    A = []
+    for row in range(len(N)):
+        A.append([])
+        for col in range(len(N)):
+            A[row].append(0)
+
+    Adj = create_adj_matrix(A, G_in)
     
+    C = DFS(Adj, [], [])
+    print(C)
+
+    D = disjoint_graphs_finder(G_in, C)
+
     for j in range(len(result)):
         result_final.append(result[j])
         result_final.append(result[j])
 
-    return result_final    
+    return result_final 
+
 
 # main function that combines the Kruskal's algorithm and the GUI
 
@@ -279,6 +366,7 @@ def main(win, width):
                     begin = True
                     algorithm(graph, V)
                     result = algorithm(graph, V)
+
                 
         if begin is not True:
             for i in range(1, len(coord)):
