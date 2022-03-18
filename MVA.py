@@ -12,6 +12,7 @@
 import pygame
 import math
 from queue import PriorityQueue
+from collections import defaultdict
 
 WIDTH = 800 # the width of our square map
 WIN = pygame.display.set_mode((WIDTH, WIDTH))
@@ -220,6 +221,91 @@ def disjoint_graphs_finder(G, track):
     print(D)
     return(D)
 
+# A function that generates a zero square matrix of desired dimensions
+
+def zero_square_matrix(dim):
+    Z = []
+    for i in range(dim):
+        Z.append([])
+        for j in range(dim):
+            Z[i].append(0)
+    return(Z)
+
+# A function that converts a graph in list form to a linked list form
+
+def direct_dict_graph(G): # graph
+    graph = defaultdict(list)
+    for elem in G:
+        g_1 = elem[0]
+        g_2 = elem[1]
+        graph[g_1].append(g_2)
+        graph[g_2].append(g_1)
+    print(graph)
+    return(graph)
+
+# A function that will remove an edge from linked list
+
+def remove_edge(graph, u, v): # for graph
+    graph[u].remove(v)
+    graph[v].remove(u)
+
+# A function that will add an edge to the linked list
+
+def add_edge(graph, u, v): # for graph
+    graph[u].append(v)
+    graph[v].append(u)
+
+# A function that finds the disjoint sets for any graph
+                
+def find_connected_elements(G, dim, i):
+    Z = zero_square_matrix(dim)
+    Adj = create_adj_matrix(Z, G)
+    C = DFS(Adj, [], [])
+    D = disjoint_graphs_finder(G, C)
+    for elem in C:
+        if i in elem:
+            count = len(elem)
+            connected = elem
+    print(count)
+    print(connected)
+    return(count, connected)
+
+# A function that counts the number of connected elements to a node in an eularian graph linked list
+
+def count_connected(graph, u, visited): # this function only works for eularian graphs. else gets stuck
+    count = 1
+    visited[u] = True
+    for vertex in graph[u]:
+        if visited[vertex] == False:
+            count += count_connected(graph, vertex, visited)
+    return count
+
+# A function that informs us whether or not it's ok to remove an edge in Fleuers
+
+def check_connectivity(graph, dim, u, v):
+    if len(graph[u]) == 1:
+        return True
+    else:
+        visited = [False]*(dim)
+        count_1 = count_connected(graph, u, visited)
+        remove_edge(graph, u, v)
+        visited = [False]*(dim)
+        count_2 = count_connected(graph, u, visited)
+        add_edge(graph, u, v)
+        if count_1 > count_2:
+            return False
+        else:
+            return True
+
+# A function to find the eularian cycle
+    
+def find_eularian_cycle(graph, dim, u):
+    for v in graph[u]:
+        if check_connectivity(graph, dim, u, v):
+            print("%d-%d" %(u,v))
+            remove_edge(graph, u, v)
+            find_eularian_cycle(graph, dim, v)
+
 # find the absolute root/parent of a node
 
 def find(parent, node, V): 
@@ -293,6 +379,23 @@ def algorithm(graph, V):
     print(C)
 
     D = disjoint_graphs_finder(G_in, C)
+
+    G = []
+    G_f = []
+    for elem in D:
+        if elem != []:
+            G.append(elem)
+    print(G)
+    for i in range(len(G)):
+        G_f.append([])
+        for j in range(len(G[i])):
+            G_f[i].append(G[i][j])
+            G_f[i].append(G[i][j])
+    print(G_f)
+
+    for i in range(len(G_f)):
+        gr = direct_dict_graph(G_f[i])
+        find_eularian_cycle(gr, len(N), G_f[i][0][0])
 
     for j in range(len(result)):
         result_final.append(result[j])
