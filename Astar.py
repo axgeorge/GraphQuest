@@ -1,9 +1,12 @@
-# The A* algorithm
-# Note: I relied heavily on Tech with Tim A* Tutorial on youtube to write this algorithm
-# Pygame is required to visualize and interact with the graph. Please install pygame!!
-# The majority of the code was written to enable pygame
-# Instruction: Run python file. Select the start cell, then the end cell, then the barriers. Then press space key!
-# Press c to reset the grid map
+"""
+The A* algorithm
+Reference: Tech with Tim A* Tutorial on youtube.
+Instruction: Run file. Select the start cell, then the end cell, then the obstacles. Undo an obstacle with right click.
+Press space key to run!
+Press c to reset the grid and try again.
+The red cells are the expanded nodes and the green cells are the unexpanded frontier nodes.
+The heuristic prioritizes expansion of nodes closer to the goal. 
+"""
 
 import pygame
 import math
@@ -270,8 +273,4 @@ def main(win, width):
     pygame.quit()
 
 main(WIN, WIDTH)
-
-
-
-
 
