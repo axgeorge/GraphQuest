@@ -1,12 +1,11 @@
-# The KRUSKAL'S MINIMUM SPANNING TREE ALGORITHM
-# Pygame is required to visualize and interact with the graph. Please install pygame!!
-# The majority of the code was written to enable pygame
-# Instruction: Run python file. Create your own graph by clicking the desired from nodes and to nodes to create edges
-# Exit program and run again to make a new graph
+"""
+KRUSKAL'S MINIMUM SPANNING TREE ALGORITHM
+Instruction: Run file. Create your own graph by clicking the desired from cell and to cell to create graph edges.
+Note: The graph must be connected for the program to work. That is, there must be a path connecting any two selected cells.
+To clear grid and try again, press c.
+"""
 
 import pygame
-import math
-from queue import PriorityQueue
 
 WIDTH = 800 # the width of our square map
 WIN = pygame.display.set_mode((WIDTH, WIDTH))
@@ -205,19 +204,16 @@ def main(win, width):
     cells = make_cells(ROWS, width)
 
     run = True # know if you started the main loop
-    started = False # know if you started the algorithm
     begin = False
     coord = []
     vertices = []
+    result = []
 
     while run:
         draw(win, cells, ROWS, width)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
-
-            if started:
-                continue # user should not be able to change stuff while the algorithm is running
 
             if event.type == pygame.MOUSEBUTTONDOWN: #pygame.mouse.get_pressed()[0]: # Left mouse button
                 mouse_presses = pygame.mouse.get_pressed()
@@ -250,15 +246,23 @@ def main(win, width):
 
                     V = list(set(vertices))
                     begin = True
-                    algorithm(graph, V)
                     result = algorithm(graph, V)
-                
-        if begin is not True:
+
+                if event.key == pygame.K_c: # Press c to clear screen
+                    cells = make_cells(ROWS, width)
+                    vertices.clear()
+                    coord.clear()
+                    result.clear()
+                    begin = False
+        
+        if not begin and len(vertices) >= 2:
             for i in range(1, len(coord)):
                 if (i % 2) != 0:
                     d = increment // 2
-                    pygame.draw.line(win, RED, (vertices[i].x + d, vertices[i].y + d), 
-                    (vertices[i - 1].x + d, vertices[i - 1].y + d), width = 3)
+                    pygame.draw.line(win, RED,
+                                    (vertices[i].x + d, vertices[i].y + d),
+                                    (vertices[i - 1].x + d, vertices[i - 1].y + d),
+                                    width=3)
 
         else:
             for i in range(len(result)):
