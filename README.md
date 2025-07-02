@@ -13,8 +13,8 @@ Visualize how classic algorithms like **Kruskal’s**, **Dijkstra’s**, **A\***
 ### Clone the repo
 
 ```bash
-git clone https://github.com/axgeorge/graphquest.git
-cd graphquest
+git clone https://github.com/axgeorge/GraphQuest.git
+cd GraphQuest
 ```
 
 ### Set up environment (with venv)
