@@ -1,410 +1,237 @@
-# The MULTI VEHICLE ALGORITHM
-# Pygame is required to visualize and interact with the graph. Please install pygame!!
-# The majority of the code was written to enable pygame
-# Instruction: Run python file. Create your own graph as follows
-# Right click for vehicle (black)
-# Left click for target (red)
-# Edge 1 between vertex 1 and vertex 2. Edge 2 between vertex 3 and vertex 4, and so on...
-# Do not left click on vehicle or vice versa
-# Press the space bar to run the algorithm
-# Exit program and run again to make a new graph
+"""
+INTERACTIVE EULERIAN TOUR EXPLORER
+
+INSTRUCTIONS:
+- Right-click to place a **vehicle depot** (black).
+- Left-click to place a **target node** (red).
+- Press **SPACEBAR** to generate Eulerian tours.
+- Press **C** to clear the grid and try again.
+
+FEATURES:
+- **Multi-vehicle routing** using minimum spanning trees.
+- **Eulerian tour generation** with directional edge coloring (forward = black, return = green).
+- Flexible and interactive — define your own scenarios in real time!
+"""
 
 import pygame
-import math
-from queue import PriorityQueue
 from collections import defaultdict
 
 WIDTH = 800 # the width of our square map
 WIN = pygame.display.set_mode((WIDTH, WIDTH))
-pygame.display.set_caption("MULTI VEHICLE ALGORITHM")
+pygame.display.set_caption("EULERIAN TOUR EXPLORER")
 
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
-BLUE = (0, 255, 0)
-YELLOW = (255, 255, 0)
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
-PURPLE = (128, 0, 128)
-ORANGE = (255, 165, 0)
 GREY = (128, 128, 128)
-TURQUOISE = (64, 244, 208)
 
-# define a class for an arbitrary point on the map as shown below
+# Define a class for an arbitrary point on the map as shown below
 
 class Point:
-    def __init__(self, row, col, width, total_rows): # width here is the width of the square cell
+    def __init__(self, row, col, width): # width here is the width of the square cell
         self.row = row
         self.col = col
         self.x = row * width
         self.y = col * width
         self.color = WHITE
-        self.neighbors = []
         self.width = width
-        self.total_rows = total_rows
 
-    def get_pos(self):
-        return self.col, self.row
-
-    def is_closed(self):
-        return self.color == RED
-
-    def is_open(self):
-        return self.color == GREEN
-
-    def is_barrier(self):
-        return self.color == BLACK
-
-    def is_start(self):
-        return self.color == ORANGE
-
-    def is_end(self):
-        return self.color == TURQUOISE
-
-    def reset(self):
-        self.color = WHITE
-
-    def make_closed(self):
+    def make_target(self):
         self.color = RED
 
-    def make_open(self):
-        self.color = GREEN
-
-    def make_barrier(self):
+    def make_vehicle(self):
         self.color = BLACK
-
-    def make_start(self):
-        self.color = ORANGE
-
-    def make_end(self):
-        self.color = TURQUOISE
-
-    def make_path(self):
-        self.color = PURPLE
 
     def draw(self, win):
         pygame.draw.rect(win, self.color, (self.x, self.y, self.width, self.width))
 
-    def update_neighbors(self, cells):
-        self.neighbors = []
-        if self.row < self.total_rows - 1 and not cells[self.row + 1][self.col].is_barrier(): # DOWN
-            self.neighbors.append(cells[self.row + 1][self.col])
-                
-        if self.row > 0 and not cells[self.row - 1][self.col].is_barrier(): # UP
-            self.neighbors.append(cells[self.row - 1][self.col])
-                
-        if self.col < self.total_rows - 1 and not cells[self.row][self.col + 1].is_barrier(): # RIGHT
-            self.neighbors.append(cells[self.row][self.col + 1])
 
-        if self.col > 0 and not cells[self.row][self.col - 1].is_barrier(): # LEFT
-            self.neighbors.append(cells[self.row][self.col - 1])
-
-    def __lt__(self, other):
-        return False
-
-
-# define a function to define each cell within the grid map. Width here is map width
-# each cell inside cells is an instance of the class Point
-
-def make_cells(rows, width):
+def make_cells(rows, width): # width here is the size of the entire grid display
+    """
+    Define each cell in the grid display. A cell is a point object defined by its row, col, and size.
+    """
     cells = []
     increment = width // rows
     for i in range(rows):
         cells.append([])
         for j in range(rows):
-            point = Point(i, j, increment, rows)
+            point = Point(i, j, increment)
             cells[i].append(point)
 
     return cells
 
 
-# define a function to draw the grid lines inside the grid map. Width here is the map width
-
-def draw_grid(win, rows, width):
+def draw_grid(win, rows, width): # win here is the display object and width is the size of the display
+    """
+    Draw the vertical and horizontal lines defining the grid. Called in the draw function.
+    """
     increment = width // rows
     for i in range(rows):
         pygame.draw.line(win, GREY, (0, i * increment), (width, i * increment))
     for j in range(rows):
         pygame.draw.line(win, GREY, (j * increment, 0), (j * increment, width))
 
-# for the following function, assume that we already know which row, and which point (node) inside the row.
-# Note that the point is an instance of Point, based on the position of the point 
-# Then we can say the following
 
-def draw(win, cells, rows, width):
+def draw(win, cells, rows, width): # win here is the display object and width is the size of the display
+    """
+    Fill the entire display white, then color each cell based on the values assigned to them. Finally draw grid lines.
+    This will be called once each frame in the main while loop.
+    """
     win.fill(WHITE)
     for row in cells:
         for point in row:
             point.draw(win)
-
     draw_grid(win, rows, width)
 
 
-# A function to find the cell position of the point clicked by the user
-
 def get_clicked_pose(pos, rows, width):
+    """
+    A function to find the cell associated with a point clicked by the user.
+    """
     increment = width // rows
     y, x = pos
-    
     row = y // increment
     col = x // increment
-
     return row, col
 
-# function that converts vertex object to vertex index. Very helpful for analyzing stuff
 
-def obj_to_index(G):
-    V = []
-    G_in = []
-    for entry in G:
-        g_1 = entry[0]
-        g_2 = entry[1]
-        V.append(g_1)
-        V.append(g_2)
-    V = list(set(V))
-    for i in range(len(G)):
-        G_in.append([V.index(G[i][0]), V.index(G[i][1]), G[i][2]]) 
-    return [V, G_in]
+def gen_obj_edges(obj_nodes, node_type):
+    """
+    Given a list of nodes (point objects), generate the list of undirected edges for the complete graph.
+    """
+    obj_edges = []
+    for i in range(len(obj_nodes)):
+        for j in range(i+1, len(obj_nodes)): # only upper triangle of the matrix
+            u, v = obj_nodes[i], obj_nodes[j]
+            if node_type[i] == 1 and node_type[j] == 1: # both are vehicle nodes
+                weight = 0
+            else:
+                x1 = u.x + u.width/2
+                y1 = u.y + u.width/2
+                x2 = v.x + v.width/2
+                y2 = v.y + v.width/2
+                weight = ((x2 - x1)**2 + (y2 - y1)**2)**0.5
+            obj_edges.append([u, v, weight])
+    return obj_edges
 
-# A function that creates an adj matrix
 
-def create_adj_matrix(A, G_in):
-    for entry in G_in:
-        g_1 = entry[0]
-        g_2 = entry[1]
-        A[g_1][g_2] = 1
-        A[g_2][g_1] = 1
-    return A
+def min_spanning_tree(obj_nodes, obj_edges):
+    """
+    Given a graph, return Kruskal's Minimum Weight Spanning Tree for that graph.
+    """
 
-# Recursion part of a depth search function
-
-def depth_first_search(A, k, visited):
-    stack = []
-    stack.append(k)
-    while len(stack) != 0:
-        s = stack.pop()
-        if visited[s] == 0:
-            visited[s] = 1
-        for neighbor in range(len(A)):
-            if A[s][neighbor] == 1:
-                if visited[neighbor] == 0:
-                    stack.append(neighbor)
-    print(visited)
-    return visited
-
-# A depth search function to identify different disconnected nodes of graphs
-
-def DFS(A, visited, track):
-    P = []
-    for i in range(len(A)):
-        visited.append(0)
-    for i in range(len(visited)):
-        track.append([])
-        if visited[i] == 0:
-            visited = depth_first_search(A, i, visited)
-        for j in range(len(visited)):
-            if visited[j] != 0 and j not in P:
-                P.append(j)
-                track[i].append(j)
-    print(track)
-    return track
-
-# A function that identifies, and categorizes disconnected graphs
-
-def disjoint_graphs_finder(G, track):
-    D = []
-    for i in range(len(track)):
-        D.append([])
-    for i in range(len(G)):
-        for j in range(len(track)):
-            if G[i][0] in track[j]:
-                D[j].append(G[i])
-    print(D)
-    return(D)
-
-# A function that generates a zero square matrix of desired dimensions
-
-def zero_square_matrix(dim):
-    Z = []
-    for i in range(dim):
-        Z.append([])
-        for j in range(dim):
-            Z[i].append(0)
-    return(Z)
-
-# A function that converts a graph in list form to a linked list form
-
-def direct_dict_graph(G): # graph
-    graph = defaultdict(list)
-    for elem in G:
-        g_1 = elem[0]
-        g_2 = elem[1]
-        graph[g_1].append(g_2)
-        graph[g_2].append(g_1)
-    print(graph)
-    return(graph)
-
-# A function that will remove an edge from linked list
-
-def remove_edge(graph, u, v): # for graph
-    graph[u].remove(v)
-    graph[v].remove(u)
-
-# A function that will add an edge to the linked list
-
-def add_edge(graph, u, v): # for graph
-    graph[u].append(v)
-    graph[v].append(u)
-
-# A function that finds the disjoint sets for any graph
-                
-def find_connected_elements(G, dim, i):
-    Z = zero_square_matrix(dim)
-    Adj = create_adj_matrix(Z, G)
-    C = DFS(Adj, [], [])
-    D = disjoint_graphs_finder(G, C)
-    for elem in C:
-        if i in elem:
-            count = len(elem)
-            connected = elem
-    print(count)
-    print(connected)
-    return(count, connected)
-
-# A function that counts the number of connected elements to a node in an eularian graph linked list
-
-def count_connected(graph, u, visited): # this function only works for eularian graphs. else gets stuck
-    count = 1
-    visited[u] = True
-    for vertex in graph[u]:
-        if visited[vertex] == False:
-            count += count_connected(graph, vertex, visited)
-    return count
-
-# A function that informs us whether or not it's ok to remove an edge in Fleuers
-
-def check_connectivity(graph, dim, u, v):
-    if len(graph[u]) == 1:
-        return True
-    else:
-        visited = [False]*(dim)
-        count_1 = count_connected(graph, u, visited)
-        remove_edge(graph, u, v)
-        visited = [False]*(dim)
-        count_2 = count_connected(graph, u, visited)
-        add_edge(graph, u, v)
-        if count_1 > count_2:
-            return False
-        else:
-            return True
-
-# A function to find the eularian cycle
+    parent = {node: node for node in obj_nodes}
+    rank = {node: 0 for node in obj_nodes}
     
-def find_eularian_cycle(graph, dim, u):
-    for v in graph[u]:
-        if check_connectivity(graph, dim, u, v):
-            print("%d-%d" %(u,v))
-            remove_edge(graph, u, v)
-            find_eularian_cycle(graph, dim, v)
-
-# find the absolute root/parent of a node
-
-def find(parent, node, V): 
-    node = V.index(node)  # get the index corresponding to the node
-    if parent[node] == node:
-        return node
-    return find(parent, V[parent[node]], V)
-
-# to merge two disjoint sets
+    def find(node):
+        """
+        Find function finds the group to which a node belongs. It does it by identifying the
+        representative (root) of the group the node belongs to. Two nodes belong to the
+        same group iff they are connected since they both are connected to the root. Hence, adding
+        an edge between such node pairs will lead to cycles.
+        """
+        if parent[node] != node:
+            parent[node] = find(parent[node]) # The assignment compresses path from node to root. Every node in the path finally points directly at root.
+        return parent[node]
+    
+    def union(node1, node2):
+        """
+        Union function combines two groups. It does this by placing the root of one
+        group as the child of the root of the other group.
         
-def union(parent, rank, node_from, node_to, V): 
-    node_from_root = find(parent, node_from, V)
-    node_to_root = find(parent, node_to, V)
+        The 'rank' heuristic is used to keep the tree shallow by always attaching
+        the shorter tree under the root of the taller tree. Note that the rank of the root of
+        a tree represents an upper bound on the height of the tree and is used only to guide
+        efficient union operations; it may not always reflect the exact height of the tree.
+        """
+        root1 = find(node1)
+        root2 = find(node2)
 
-    if rank[node_from_root] < rank[node_to_root]:
-         parent[node_from_root] = node_to_root
-               
-    elif rank[node_to_root] < rank[node_from_root]:
-        parent[node_to_root] = node_from_root
-                
-    else:
-        parent[node_to_root] = node_from_root
-        rank[node_from_root] += 1
-                 
-            
-# THE MULTI VEHICLE ALGORITHM
+        if root1 == root2:
+            return
 
-def algorithm(graph, V):
-    i, e = 0, 0
-    parent = []
-    rank = []
-    result = []
-    result_final = []
-    graph = sorted(graph, key = lambda item: item[2])
-    max_edges = len(V) - 1
+        if rank[root1] < rank[root2]:
+            parent[root1] = root2
 
-    for node in range(len(V)):
-        parent.append(node)
-        rank.append(0)
+        elif rank[root2] < rank[root1]:
+            parent[root2] = root1
 
-    while e < max_edges:
-        u, v, w = graph[i]
-        x = find(parent, u, V)
-        y = find(parent, v, V)
-        i += 1
-
-        if x != y:
-            result.append([u, v, w])
-            union(parent, rank, V[x], V[y], V)
-            e += 1
-
-    f = 0
-    for k in range(len(result)):
-        c = result[f][2]
-        if c == 0:
-            del result[f]
         else:
-            f += 1
+            rank[root1] += 1
+            parent[root2] = root1
 
-    [N, G_in] = obj_to_index(result)
-    print(G_in)
-    A = []
-    for row in range(len(N)):
-        A.append([])
-        for col in range(len(N)):
-            A[row].append(0)
-
-    Adj = create_adj_matrix(A, G_in)
     
-    C = DFS(Adj, [], [])
-    print(C)
+    mstree = []
+    obj_edges = sorted(obj_edges, key=lambda x: x[2])
+    for [u, v, w] in obj_edges:
+        if find(u) != find(v):
+            union(u, v)
+            mstree.append([u, v, w])
 
-    D = disjoint_graphs_finder(G_in, C)
-
-    G = []
-    G_f = []
-    for elem in D:
-        if elem != []:
-            G.append(elem)
-    print(G)
-    for i in range(len(G)):
-        G_f.append([])
-        for j in range(len(G[i])):
-            G_f[i].append(G[i][j])
-            G_f[i].append(G[i][j])
-    print(G_f)
-
-    for i in range(len(G_f)):
-        gr = direct_dict_graph(G_f[i])
-        find_eularian_cycle(gr, len(N), G_f[i][0][0])
-
-    for j in range(len(result)):
-        result_final.append(result[j])
-        result_final.append(result[j])
-
-    return result_final 
+    return mstree
 
 
-# main function that combines the Kruskal's algorithm and the GUI
+def gen_adj_list(edges):
+    """
+    Get an adjacency list for a graph represented as a list of edges.
+    """
+    adj_lst = defaultdict(list)
+    for [u, v, w] in edges:
+        adj_lst[u].append(v)
+        adj_lst[v].append(u)
+    return adj_lst
+
+
+def dfs(root, adj_lst, path, visited):
+    """
+    Depth first search.
+    """
+    if root not in visited:
+        visited.add(root)
+        path.append(root)
+        for node in adj_lst[root]:
+            dfs(node, adj_lst, path, visited)
+
+
+def eul_tour(root, adj_lst, tour_eul, visited):
+    """
+    Given a tree, use a DFS variant to obtain a double-edged walk that traverse all
+    nodes in the tree twice in opposite directions. Same as an Eulerian tour on the
+    tree if all its edges were doubled.
+    """
+    if root not in visited:
+        visited.add(root)
+        tour_eul.append(root)
+        for node in adj_lst[root]:
+            eul_tour(node, adj_lst, tour_eul, visited)
+            tour_eul.append(root)
+
+
+def find_veh_eul_tours(vehicles, adj_lst):
+    """
+    Return Eulerian tours for each vehicle by performing a DFS variant from each vehicle.
+    """
+    tours = list()
+    for vehicle in vehicles:
+        tour_eul = []
+        eul_tour(vehicle, adj_lst, tour_eul, set())
+        tours.append(tour_eul)
+    return tours
+
+
+def find_veh_tsp_tours(vehicles, adj_lst):
+    """
+    Return TSP tours for each vehicle by performing a DFS from each vehicle.
+    """
+    tours = list()
+    for vehicle in vehicles:
+        tour_eul = []
+        dfs(vehicle, adj_lst, tour_eul, set())
+        tour_eul.append(tour_eul[0]) # return to start
+        tours.append(tour_eul)
+    return tours
+
 
 def main(win, width):
     
@@ -413,11 +240,10 @@ def main(win, width):
     cells = make_cells(ROWS, width)
 
     run = True # know if you started the main loop
-    started = False # know if you started the algorithm
-    begin = False
-    coord = []
-    vertices = []
-    binary = [] # this is to keep track of whether an edge is a vehicle to vehicle edge, or not!
+    solved = False # is the problem solved yet?
+    nodes = []
+    binary = [] # keep track of whether a node is a vehicle node or target node
+    result = []
 
     while run:
         draw(win, cells, ROWS, width)
@@ -425,72 +251,97 @@ def main(win, width):
             if event.type == pygame.QUIT:
                 run = False
 
-            if started:
-                continue # user should not be able to change stuff while the algorithm is running
-
-            if event.type == pygame.MOUSEBUTTONDOWN: #pygame.mouse.get_pressed()[0]: # Left mouse button
+            if event.type == pygame.MOUSEBUTTONDOWN: 
                 mouse_presses = pygame.mouse.get_pressed()
                 pos = pygame.mouse.get_pos()
                 row, col = get_clicked_pose(pos, ROWS, width)
                 point = cells[row][col]
-                vertices.append(point)
-                coord.append(pos)
-                if mouse_presses[0]:
-                    point.make_closed()
+                nodes.append(point)
+                
+                if mouse_presses[0]: # Left click
+                    point.make_target()
                     binary.append(0)
-                elif mouse_presses[2]:
-                    point.make_barrier()
+                elif mouse_presses[2]: # Right click
+                    point.make_vehicle()
                     binary.append(1)
 
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
-                    edge_length = []
-                    graph = []
-                    for i in range(len(coord) - 1):
-                        if (i % 2) == 0:
-                            p_1 = vertices[i]
-                            p_2 = vertices[i + 1]
-                            if binary[i] == 1 and binary[i + 1] == 1:
-                                d = 0
-                            else:
-                                x_1 = p_1.x + (increment // 2)
-                                y_1 = p_1.y + (increment // 2)
-                                x_2 = p_2.x + (increment // 2)
-                                y_2 = p_2.y + (increment // 2)
-                                d = ((y_2 - y_1)**2 + (x_2 - x_1)**2)**0.5 # Euclidian Distance
-                            edge_length.append(d)
-                        
-                    for j in range(len(edge_length)):
-                        i = 2 * j
-                        graph.append([vertices[i], vertices[i + 1], edge_length[j]])
+                    
+                    def fix_adjacency_list(adjlist, binary):
+                        """
+                        Removes edges between vehicle nodes from the adjacency list.
+                        """
+                        node_to_index = {nodes[i]: i for i in range(len(nodes))}
+                        for i in range(len(binary)):
+                            if binary[i] == 1: # ith node is a vehicle
+                                vi = nodes[i]
+                                for node in adjlist[vi][:]:  # Iterate over a copy to avoid issues during removal
+                                    if binary[node_to_index[node]] == 1:
+                                        adjlist[vi].remove(node)
+                                        adjlist[node].remove(vi)  # Ensure undirected edge is removed both ways
+                        return adjlist
+                    
+                    vehicles = set()
+                    for i in range(len(binary)):
+                        if binary[i] == 1:
+                            vehicles.add(nodes[i])
 
-                    V = list(set(vertices))
-                    begin = True
-                    algorithm(graph, V)
-                    result = algorithm(graph, V)
+                    edges = gen_obj_edges(nodes, binary)
+                    mstree = min_spanning_tree(nodes, edges)
+                    adjlist = gen_adj_list(mstree)
+                    adjlist = fix_adjacency_list(adjlist, binary)
+                    tours = find_veh_eul_tours(vehicles, adjlist)
+                    # tours = find_veh_tsp_tours(vehicles, adjlist)
+                    
+                    result.clear()
+                    for tour in tours:
+                        for i in range(1, len(tour)):
+                            result.append((tour[i - 1], tour[i]))
+                    solved = True
+                    
 
+                if event.key == pygame.K_c: # Press c to clear screen
+                    cells = make_cells(ROWS, width)
+                    nodes.clear()
+                    binary.clear()
+                    result.clear()
+                    solved = False
+                    
+        if not solved: # if not solved yet, do not display result
+            pass
                 
-        if begin is not True:
-            for i in range(1, len(coord)):
-                if (i % 2) != 0:
-                    d = increment // 2
-                    pygame.draw.line(win, RED, (vertices[i].x + d, vertices[i].y + d), 
-                    (vertices[i - 1].x + d, vertices[i - 1].y + d), width = 3)
-
         else:
-            for i in range(len(result)):
-                initial = result[i][0]
-                final = result[i][1]
-                initial_x = initial.x + (increment // 2)
-                initial_y = initial.y + (increment // 2)
-                final_x = final.x + (increment // 2)
-                final_y = final.y + (increment // 2)
-                if (i % 2) != 0:
-                    pygame.draw.line(win, BLACK, (initial_x, initial_y), (final_x, final_y), width = 3) 
-                else:
-                    pygame.draw.line(win, GREEN, (initial.x + (increment // 3), initial.y + (increment // 3)), 
-                    (final.x + (increment // 3), final.y + (increment // 3)), width = 3) 
+            shift_amount = 3  # pixels to shift up/down
+
+            for tour in tours:
+                visited_nodes = set()
+                visited_nodes.add(tour[0])  # Mark starting node as visited
+
+                for i in range(1, len(tour)):
+                    u = tour[i - 1]
+                    v = tour[i]
+
+                    x1 = u.x + (increment // 2)
+                    y1 = u.y + (increment // 2)
+                    x2 = v.x + (increment // 2)
+                    y2 = v.y + (increment // 2)
+
+                    # Check if edge is forward or backward
+                    if v not in visited_nodes:
+                        color = BLACK  # forward edge
+                        visited_nodes.add(v)
+                        y_shift = -shift_amount  # shift up
+                    else:
+                        color = GREEN  # backward edge
+                        y_shift = shift_amount  # shift down
+
+                    # Apply vertical shift to both points
+                    start = (x1, y1 + y_shift)
+                    end = (x2, y2 + y_shift)
+
+                    pygame.draw.line(win, color, start, end, width=3)
 
         pygame.display.flip()
             
