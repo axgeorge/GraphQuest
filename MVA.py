@@ -14,6 +14,7 @@ FEATURES:
 """
 
 import pygame
+import math
 from collections import defaultdict
 
 WIDTH = 800 # the width of our square map
@@ -204,8 +205,9 @@ def eul_tour(root, adj_lst, tour_eul, visited):
         visited.add(root)
         tour_eul.append(root)
         for node in adj_lst[root]:
-            eul_tour(node, adj_lst, tour_eul, visited)
-            tour_eul.append(root)
+            if node not in visited:
+                eul_tour(node, adj_lst, tour_eul, visited)
+                tour_eul.append(root)
 
 
 def find_veh_eul_tours(vehicles, adj_lst):
@@ -341,6 +343,29 @@ def main(win, width):
                     start = (x1, y1 + y_shift)
                     end = (x2, y2 + y_shift)
 
+                    # Draw arrowhead
+                    arrow_length = 10  # length of the arrowhead line
+                    arrow_angle = math.radians(30)  # angle between arrowhead lines
+
+                    # Direction vector of the edge
+                    dx = x2 - x1
+                    dy = (y2 + y_shift) - (y1 + y_shift)
+                    angle = math.atan2(dy, dx)
+
+                    # Arrowhead points
+                    arrow_tip = (x2, y2 + y_shift)
+                    left_arrow = (
+                        x2 - arrow_length * math.cos(angle - arrow_angle),
+                        (y2 + y_shift) - arrow_length * math.sin(angle - arrow_angle)
+                    )
+                    right_arrow = (
+                        x2 - arrow_length * math.cos(angle + arrow_angle),
+                        (y2 + y_shift) - arrow_length * math.sin(angle + arrow_angle)
+                    )
+
+                    # Draw arrowhead as a filled triangle
+                    pygame.draw.polygon(win, color, [arrow_tip, left_arrow, right_arrow])
+                    
                     pygame.draw.line(win, color, start, end, width=3)
 
         pygame.display.flip()
