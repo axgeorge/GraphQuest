@@ -1,10 +1,10 @@
 """
 The Dijkstra's algorithm
-Reference: Tech with Tim A* Tutorial on youtube.
 Instruction: Run file. Select the start cell, then the end cell, then the obstacles. Undo an obstacle with right click.
 Press space key to run!
 Press c to reset the grid and try again.
 The red cells are the expanded nodes and the green cells are the unexpanded frontier nodes.
+Reference: Tech with Tim A* Tutorial on youtube.
 """
 
 import pygame
