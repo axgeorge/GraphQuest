@@ -1,6 +1,12 @@
 
 # GraphQuest
 
+<p align="center">
+  <img alt="Image" src="https://github.com/user-attachments/assets/74b79e86-9148-4652-855f-13f1baae91a3" width="32%" hspace="10" />
+  <img alt="Image" src="https://github.com/user-attachments/assets/31d35e40-099b-48db-a3b1-0f463886675a" width="32%" hspace="10" />
+  <img alt="Image" src="https://github.com/user-attachments/assets/ee920d3a-18e5-4e4e-bced-b657b2a7e329" width="32%" hspace="10" />
+</p>
+
 *A visual journey through graph algorithms.*
 
 Build your own graph instances in an interactive grid world.  
